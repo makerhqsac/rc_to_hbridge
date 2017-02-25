@@ -1,48 +1,60 @@
 #include <EnableInterrupt.h>
 
-#define RC_NUM_CHANNELS  2
+/* pin configuration */
+#define RC_THROTTLE_INPUT       2
+#define RC_STEERING_INPUT       3
+#define RC_AUX_A_INPUT         A0
+#define RC_AUX_B_INPUT         A1
 
-#define RC_THROTTLE  0
-#define RC_STEERING  1
+#define AUX_OUT_A              A5
+#define AUX_OUT_B              A6
 
-#define RC_THROTTLE_INPUT  2
-#define RC_STEERING_INPUT  3
-
-#define MOT_L_EN_OUTPUT    10
-#define MOT_L_FWD_OUTPUT   8
-#define MOT_L_REV_OUTPUT   6
-#define MOT_R_EN_OUTPUT    9
-#define MOT_R_FWD_OUTPUT   7
-#define MOT_R_REV_OUTPUT   5
+#define MOT_L_EN_OUTPUT        10
+#define MOT_L_FWD_OUTPUT        8
+#define MOT_L_REV_OUTPUT        6
+#define MOT_R_EN_OUTPUT         9
+#define MOT_R_FWD_OUTPUT        7
+#define MOT_R_REV_OUTPUT        5
 
 #define LED_RC_STATUS_OUTPUT   13
 
-
+/* rc configuration */
 #define MAX_SPEED             400 // max motor speed
-#define PULSE_WIDTH_DEADBAND   25 // pulse width difference from 1500 us (microseconds) to ignore (to compensate for control centering offset)
-#define PULSE_WIDTH_RANGE     500 // pulse width difference from 1500 us to be treated as full scale input (for example, a value of 350 means
-                                  //   any pulse width <= 1150 us or >= 1850 us is considered full scale)
-
+#define PULSE_WIDTH_DEADBAND   25 // pulse width difference from RC_CENTER us (microseconds) to ignore (to compensate for control centering offset)
+#define PULSE_WIDTH_RANGE     500 // pulse width difference from RC_CENTER us to be treated as full scale input
+#define RC_CENTER            1500
 #define RC_PULSE_TIMEOUT     1000
+
+
+enum state_t {
+  STATE_IDLE,
+  STATE_FWD,
+  STATE_REV,
+  STATE_BREAK
+};
+
+#define RC_THROTTLE             0
+#define RC_STEERING             1
+#define RC_AUX_A                2
+#define RC_AUX_B                3
+
+#define RC_NUM_CHANNELS         4
 
 
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega32U4__)
   #define USE_20KHZ_PWM
 #endif
 
-#define STATE_IDLE      0
-#define STATE_FWD       1
-#define STATE_REV       2
-#define STATE_BREAK     3
-
 uint16_t rc_values[RC_NUM_CHANNELS];
 uint32_t rc_start[RC_NUM_CHANNELS];
 volatile uint16_t rc_shared[RC_NUM_CHANNELS];
 
 long last_rc_pulse = 0;
-int state = STATE_IDLE;
+state_t state = STATE_IDLE;
 int throttle = 0;
 int steering = 0;
+int aux_a = RC_CENTER;
+int aux_b = RC_CENTER;
 int left_speed = 0;
 int right_speed = 0;
 
@@ -53,10 +65,14 @@ void rc_read_values() {
 
   throttle = (int)rc_values[RC_THROTTLE];
   steering = (int)rc_values[RC_STEERING];
+  aux_a = (int)rc_values[RC_AUX_A];
+  aux_b = (int)rc_values[RC_AUX_B];
 
   if (millis() - last_rc_pulse > RC_PULSE_TIMEOUT) {
     throttle = 0;
     steering = 0;
+    aux_a = RC_CENTER; // aux outputs will keep current state if value is centered
+    aux_b = RC_CENTER;
   }
 
   if (throttle > 0 && steering > 0) {
@@ -78,10 +94,14 @@ void calc_input(uint8_t channel, uint8_t input_pin) {
 
 void calc_throttle() { calc_input(RC_THROTTLE, RC_THROTTLE_INPUT); }
 void calc_steering() { calc_input(RC_STEERING, RC_STEERING_INPUT); }
+void calc_aux_a() { calc_input(RC_AUX_A, RC_AUX_A_INPUT); }
+void calc_aux_b() { calc_input(RC_AUX_B, RC_AUX_B_INPUT); }
 
 void setup() {
   pinMode(RC_THROTTLE_INPUT, INPUT);
   pinMode(RC_STEERING_INPUT, INPUT);
+  pinMode(RC_AUX_A_INPUT, INPUT);
+  pinMode(RC_AUX_B_INPUT, INPUT);
 
 #ifdef USE_20KHZ_PWM
     // Timer 1 configuration
@@ -108,11 +128,14 @@ void setup() {
 
   enableInterrupt(RC_THROTTLE_INPUT, calc_throttle, CHANGE);
   enableInterrupt(RC_STEERING_INPUT, calc_steering, CHANGE);
+  enableInterrupt(RC_AUX_A_INPUT, calc_aux_a, CHANGE);
+  enableInterrupt(RC_AUX_B_INPUT, calc_aux_b, CHANGE);
 }
 
 void loop() {
   rc_read_values();
   calculate_speeds();
+  set_aux();
 
   switch(state) {
     case STATE_IDLE:
@@ -133,9 +156,9 @@ void loop() {
 void run_state_idle() {
   set_speeds(0, 0);
 
-  if (throttle > 1500 + PULSE_WIDTH_DEADBAND) {
+  if (throttle > RC_CENTER + PULSE_WIDTH_DEADBAND) {
     state = STATE_FWD;
-  } else if (throttle < 1500 - PULSE_WIDTH_DEADBAND) {
+  } else if (throttle < RC_CENTER - PULSE_WIDTH_DEADBAND) {
     state = STATE_REV;
   }
 }
@@ -144,7 +167,7 @@ void run_state_fwd() {
   set_speeds(left_speed, right_speed);
 
   // state transitions
-  if (throttle < 1500 - PULSE_WIDTH_DEADBAND) {
+  if (throttle < RC_CENTER - PULSE_WIDTH_DEADBAND) {
     state = STATE_BREAK;
   }
 }
@@ -153,7 +176,7 @@ void run_state_rev() {
   set_speeds(left_speed, right_speed);
 
   // state transitions
-  if (throttle > 1500 + PULSE_WIDTH_DEADBAND) {
+  if (throttle > RC_CENTER + PULSE_WIDTH_DEADBAND) {
     state = STATE_FWD;
   }
 }
@@ -162,7 +185,7 @@ void run_state_break() {
   apply_break();
 
   // state transitions
-  if (throttle > 1500 - PULSE_WIDTH_DEADBAND) {
+  if (throttle > RC_CENTER - PULSE_WIDTH_DEADBAND) {
     state = STATE_REV;
   }
 }
@@ -174,9 +197,9 @@ void calculate_speeds() {
 
   if (calc_throttle > 0 && calc_steering > 0) {
 
-    // RC signals encode information in pulse width centered on 1500 us (microseconds); subtract 1500 to get a value centered on 0
-    calc_throttle -= 1500;
-    calc_steering -= 1500;
+    // RC signals encode information in pulse width centered on RC_CENTER us (microseconds); subtract RC_CENTER to get a value centered on 0
+    calc_throttle -= RC_CENTER;
+    calc_steering -= RC_CENTER;
 
     // apply deadband
     if (abs(calc_throttle) <= PULSE_WIDTH_DEADBAND)
@@ -256,6 +279,19 @@ void set_speeds(int left_speed, int right_speed) {
   set_right_speed(right_speed);
 }
 
+void set_aux() {
+  if (aux_a > RC_CENTER + PULSE_WIDTH_DEADBAND) {
+    digitalWrite(AUX_OUT_A, HIGH);
+  } else if (aux_a < RC_CENTER - PULSE_WIDTH_DEADBAND) {
+    digitalWrite(AUX_OUT_A, LOW);
+  }
+  if (aux_b > RC_CENTER + PULSE_WIDTH_DEADBAND) {
+    digitalWrite(AUX_OUT_B, HIGH);
+  } else if (aux_b < RC_CENTER - PULSE_WIDTH_DEADBAND) {
+    digitalWrite(AUX_OUT_B, LOW);
+  }
+}
+
 void apply_break() {
   digitalWrite(MOT_L_FWD_OUTPUT, HIGH);
   digitalWrite(MOT_L_REV_OUTPUT, HIGH);
@@ -263,7 +299,7 @@ void apply_break() {
   digitalWrite(MOT_R_REV_OUTPUT, HIGH);
 
   int calc_throttle = throttle;
-  calc_throttle -= 1500; // center == 0
+  calc_throttle -= RC_CENTER; // center == 0
   if (abs(calc_throttle) <= PULSE_WIDTH_DEADBAND)
       calc_throttle = 0;
 
