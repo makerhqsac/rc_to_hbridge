@@ -37,3 +37,7 @@
 .tags1
 hardware/*bak
 hardware/_autosave*
+
+hardware/*.dxf
+hardware/*.svg
+hardware/*gerbers*

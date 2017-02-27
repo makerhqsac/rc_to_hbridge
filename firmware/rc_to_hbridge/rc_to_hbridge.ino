@@ -23,14 +23,15 @@
 #define PULSE_WIDTH_DEADBAND   25 // pulse width difference from RC_CENTER us (microseconds) to ignore (to compensate for control centering offset)
 #define PULSE_WIDTH_RANGE     500 // pulse width difference from RC_CENTER us to be treated as full scale input
 #define RC_CENTER            1500
-#define RC_PULSE_TIMEOUT     1000
+#define RC_PULSE_TIMEOUT      500
 
 
 enum state_t {
   STATE_IDLE,
   STATE_FWD,
   STATE_REV,
-  STATE_BREAK
+  STATE_BREAK,
+  STATE_NO_RC
 };
 
 #define RC_THROTTLE             0
@@ -137,6 +138,10 @@ void loop() {
   calculate_speeds();
   set_aux();
 
+  if (throttle <= 0 && steering <= 0) {
+    state = STATE_NO_RC;
+  }
+
   switch(state) {
     case STATE_IDLE:
       run_state_idle();
@@ -149,6 +154,9 @@ void loop() {
       break;
     case STATE_BREAK:
       run_state_break();
+      break;
+    case STATE_NO_RC:
+      run_state_no_rc();
       break;
   }
 }
@@ -187,6 +195,14 @@ void run_state_break() {
   // state transitions
   if (throttle > RC_CENTER - PULSE_WIDTH_DEADBAND) {
     state = STATE_REV;
+  }
+}
+
+void run_state_no_rc() {
+  set_speeds(0, 0);
+
+  if (throttle > 0 && steering > 0) {
+    state = STATE_IDLE;
   }
 }
 

@@ -28,6 +28,7 @@ LIBS:opto
 LIBS:atmel
 LIBS:contrib
 LIBS:valves
+LIBS:rc_to_hbridge-cache
 EELAYER 25 0
 EELAYER END
 $Descr A4 11693 8268
@@ -131,23 +132,12 @@ F 3 "" H 8650 2650 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L Crystal Y1
-U 1 1 58A87527
-P 5050 2650
-F 0 "Y1" H 5050 2800 50  0000 C CNN
-F 1 "16Mhz" H 5050 2500 50  0000 C CNN
-F 2 "Crystals:Crystal_SMD_5032-2pin_5.0x3.2mm" H 5050 2650 50  0001 C CNN
-F 3 "" H 5050 2650 50  0000 C CNN
-	1    5050 2650
-	0    1    1    0   
-$EndComp
-$Comp
 L C C1
 U 1 1 58A87561
 P 5450 2500
 F 0 "C1" H 5475 2600 50  0000 L CNN
 F 1 "22pF" H 5475 2400 50  0000 L CNN
-F 2 "Capacitors_THT:C_Disc_D3.0mm_W1.6mm_P2.50mm" H 5488 2350 50  0001 C CNN
+F 2 "Capacitors_SMD:C_0603" H 5488 2350 50  0001 C CNN
 F 3 "" H 5450 2500 50  0000 C CNN
 	1    5450 2500
 	0    1    1    0   
@@ -158,7 +148,7 @@ U 1 1 58A875A5
 P 5450 2800
 F 0 "C2" H 5475 2900 50  0000 L CNN
 F 1 "22pF" H 5475 2700 50  0000 L CNN
-F 2 "Capacitors_THT:C_Disc_D3.0mm_W1.6mm_P2.50mm" H 5488 2650 50  0001 C CNN
+F 2 "Capacitors_SMD:C_0603" H 5488 2650 50  0001 C CNN
 F 3 "" H 5450 2800 50  0000 C CNN
 	1    5450 2800
 	0    1    1    0   
@@ -179,15 +169,9 @@ Wire Wire Line
 Wire Wire Line
 	4800 2600 4800 2500
 Wire Wire Line
-	4800 2500 5300 2500
-Connection ~ 5050 2500
-Wire Wire Line
 	4100 2700 4800 2700
 Wire Wire Line
 	4800 2700 4800 2800
-Wire Wire Line
-	4800 2800 5300 2800
-Connection ~ 5050 2800
 Wire Wire Line
 	5600 2500 5750 2500
 Wire Wire Line
@@ -559,9 +543,9 @@ Connection ~ 6400 2950
 Wire Wire Line
 	6250 3050 6250 4100
 Wire Wire Line
-	7850 4100 6250 4100
+	6250 4100 7850 4100
 Wire Wire Line
-	7850 3050 7850 4100
+	7850 4100 7850 3050
 Wire Wire Line
 	7050 4100 7050 4800
 Connection ~ 7050 4100
@@ -608,4 +592,26 @@ Text Label 7550 2850 2    60   ~ 0
 RC_A
 Text Label 7550 3350 2    60   ~ 0
 RC_B
+$Comp
+L Crystal_GND24 Y1
+U 1 1 58B3B714
+P 5050 2650
+F 0 "Y1" H 5175 2850 50  0000 L CNN
+F 1 "Crystal_GND24" H 5175 2775 50  0000 L CNN
+F 2 "Crystals:Crystal_SMD_5032-4pin_5.0x3.2mm" H 5050 2650 50  0001 C CNN
+F 3 "" H 5050 2650 50  0000 C CNN
+	1    5050 2650
+	0    1    1    0   
+$EndComp
+Connection ~ 5750 3350
+Wire Wire Line
+	4800 2500 5300 2500
+Connection ~ 5050 2500
+Wire Wire Line
+	4800 2800 5300 2800
+Connection ~ 5050 2800
+Wire Wire Line
+	4850 2650 5750 2650
+Connection ~ 5750 2650
+Connection ~ 5250 2650
 $EndSCHEMATC
