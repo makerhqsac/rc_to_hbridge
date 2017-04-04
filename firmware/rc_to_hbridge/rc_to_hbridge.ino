@@ -1,4 +1,5 @@
 #include <EnableInterrupt.h>
+#include <EEPROM.h>
 
 /* pin configuration */
 #define RC_THROTTLE_INPUT       2
@@ -20,18 +21,18 @@
 
 /* rc configuration */
 #define MAX_SPEED             400 // max motor speed
-#define PULSE_WIDTH_DEADBAND   25 // pulse width difference from RC_CENTER us (microseconds) to ignore (to compensate for control centering offset)
-#define PULSE_WIDTH_RANGE     500 // pulse width difference from RC_CENTER us to be treated as full scale input
-#define RC_CENTER            1500
-#define RC_PULSE_TIMEOUT      500
-
+#define RC_PULSE_CENTER      1500 // pulse width (microseconds) for RC center
+#define PULSE_WIDTH_DEADBAND   25 // pulse width difference from RC_PULSE_CENTER us (microseconds) to ignore (to compensate for control centering offset)
+#define PULSE_WIDTH_RANGE     400 // pulse width difference from RC_PULSE_CENTER us to be treated as full scale input
+#define RC_PULSE_TIMEOUT      500 // in milliseconds
 
 enum state_t {
   STATE_IDLE,
   STATE_FWD,
   STATE_REV,
   STATE_BREAK,
-  STATE_NO_RC
+  STATE_NO_RC,
+  STATE_CONFIG
 };
 
 #define RC_THROTTLE             0
@@ -40,6 +41,10 @@ enum state_t {
 #define RC_AUX_B                3
 
 #define RC_NUM_CHANNELS         4
+
+#define BREAK_MODE_DISABLED     1
+#define BREAK_MODE_DIGITAL      2
+#define BREAK_MODE_PWM          3
 
 
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega32U4__)
@@ -54,10 +59,25 @@ long last_rc_pulse = 0;
 state_t state = STATE_IDLE;
 int throttle = 0;
 int steering = 0;
-int aux_a = RC_CENTER;
-int aux_b = RC_CENTER;
+int aux_a, aux_b;
 int left_speed = 0;
 int right_speed = 0;
+
+#define CONFIG_VERSION "RC9"
+#define CONFIG_START 32
+
+// runtime configurable items
+struct ConfigStruct {
+  char version[4]; // do not change
+  // The variables of your settings
+  int rc_center;
+  int break_mode;
+} config = {
+  CONFIG_VERSION,
+  // The default values
+  RC_PULSE_CENTER, BREAK_MODE_DISABLED
+};
+
 
 void rc_read_values() {
   noInterrupts();
@@ -72,8 +92,8 @@ void rc_read_values() {
   if (millis() - last_rc_pulse > RC_PULSE_TIMEOUT) {
     throttle = 0;
     steering = 0;
-    aux_a = RC_CENTER; // aux outputs will keep current state if value is centered
-    aux_b = RC_CENTER;
+    aux_a = config.rc_center; // aux outputs will keep current state if value is centered
+    aux_b = config.rc_center;
   }
 
   if (throttle > 0 && steering > 0) {
@@ -98,11 +118,33 @@ void calc_steering() { calc_input(RC_STEERING, RC_STEERING_INPUT); }
 void calc_aux_a() { calc_input(RC_AUX_A, RC_AUX_A_INPUT); }
 void calc_aux_b() { calc_input(RC_AUX_B, RC_AUX_B_INPUT); }
 
+
+void load_config() {
+  // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(CONFIG_START + 0) == CONFIG_VERSION[0] &&
+      EEPROM.read(CONFIG_START + 1) == CONFIG_VERSION[1] &&
+      EEPROM.read(CONFIG_START + 2) == CONFIG_VERSION[2])
+    for (unsigned int t=0; t<sizeof(config); t++)
+      *((char*)&config + t) = EEPROM.read(CONFIG_START + t);
+}
+
+void save_config() {
+  for (unsigned int t=0; t<sizeof(config); t++)
+    EEPROM.write(CONFIG_START + t, *((char*)&config + t));
+}
+
+
 void setup() {
   pinMode(RC_THROTTLE_INPUT, INPUT);
   pinMode(RC_STEERING_INPUT, INPUT);
   pinMode(RC_AUX_A_INPUT, INPUT);
   pinMode(RC_AUX_B_INPUT, INPUT);
+
+  load_config();
+
+  aux_a = config.rc_center;
+  aux_b = config.rc_center;
 
 #ifdef USE_20KHZ_PWM
     // Timer 1 configuration
@@ -140,6 +182,10 @@ void loop() {
 
   if (throttle <= 0 && steering <= 0) {
     state = STATE_NO_RC;
+  } else {
+    if (state == STATE_NO_RC) {
+      state = STATE_IDLE;
+    }
   }
 
   switch(state) {
@@ -155,6 +201,9 @@ void loop() {
     case STATE_BREAK:
       run_state_break();
       break;
+    case STATE_CONFIG:
+      run_state_config();
+      break;
     case STATE_NO_RC:
       run_state_no_rc();
       break;
@@ -164,9 +213,11 @@ void loop() {
 void run_state_idle() {
   set_speeds(0, 0);
 
-  if (throttle > RC_CENTER + PULSE_WIDTH_DEADBAND) {
+  if (throttle > config.rc_center + 250) {
+    state = STATE_CONFIG;
+  } else if (throttle > config.rc_center + PULSE_WIDTH_DEADBAND) {
     state = STATE_FWD;
-  } else if (throttle < RC_CENTER - PULSE_WIDTH_DEADBAND) {
+  } else if (throttle < config.rc_center - PULSE_WIDTH_DEADBAND) {
     state = STATE_REV;
   }
 }
@@ -175,7 +226,7 @@ void run_state_fwd() {
   set_speeds(left_speed, right_speed);
 
   // state transitions
-  if (throttle < RC_CENTER - PULSE_WIDTH_DEADBAND) {
+  if (config.break_mode != BREAK_MODE_DISABLED && throttle < config.rc_center - PULSE_WIDTH_DEADBAND) {
     state = STATE_BREAK;
   }
 }
@@ -184,7 +235,7 @@ void run_state_rev() {
   set_speeds(left_speed, right_speed);
 
   // state transitions
-  if (throttle > RC_CENTER + PULSE_WIDTH_DEADBAND) {
+  if (throttle > config.rc_center + PULSE_WIDTH_DEADBAND) {
     state = STATE_FWD;
   }
 }
@@ -193,9 +244,42 @@ void run_state_break() {
   apply_break();
 
   // state transitions
-  if (throttle > RC_CENTER - PULSE_WIDTH_DEADBAND) {
+  if (throttle > config.rc_center - PULSE_WIDTH_DEADBAND) {
     state = STATE_REV;
   }
+}
+
+void run_state_config() {
+
+  // indicate we are in config mode
+  blink_status(5);
+
+  delay(3000);
+
+  blink_status(config.break_mode);
+
+  while (true) {
+    if (steering > config.rc_center + 250) {
+      int new_mode = config.break_mode + 1;
+      if (new_mode > BREAK_MODE_PWM) {
+        new_mode = BREAK_MODE_DISABLED;
+      }
+      config.break_mode = new_mode;
+      save_config();
+      blink_status(config.break_mode);
+      delay(500);
+    } else if (steering < config.rc_center - 250) {
+      int new_mode = config.break_mode - 1;
+      if (new_mode < BREAK_MODE_DISABLED) {
+        new_mode = BREAK_MODE_PWM;
+      }
+      config.break_mode = new_mode;
+      save_config();
+      blink_status(config.break_mode);
+      delay(500);
+    }
+  }
+
 }
 
 void run_state_no_rc() {
@@ -206,6 +290,14 @@ void run_state_no_rc() {
   }
 }
 
+void blink_status(int count) {
+  for (int i = 0; i < count; i++) {
+    digitalWrite(LED_RC_STATUS_OUTPUT, HIGH);
+    delay(500);
+    digitalWrite(LED_RC_STATUS_OUTPUT, LOW);
+  }
+}
+
 void calculate_speeds() {
 
   int calc_throttle = throttle;
@@ -213,9 +305,9 @@ void calculate_speeds() {
 
   if (calc_throttle > 0 && calc_steering > 0) {
 
-    // RC signals encode information in pulse width centered on RC_CENTER us (microseconds); subtract RC_CENTER to get a value centered on 0
-    calc_throttle -= RC_CENTER;
-    calc_steering -= RC_CENTER;
+    // RC signals encode information in pulse width centered on config.rc_center us (microseconds); subtract config.rc_center to get a value centered on 0
+    calc_throttle -= config.rc_center;
+    calc_steering -= config.rc_center;
 
     // apply deadband
     if (abs(calc_throttle) <= PULSE_WIDTH_DEADBAND)
@@ -296,46 +388,53 @@ void set_speeds(int left_speed, int right_speed) {
 }
 
 void set_aux() {
-  if (aux_a > RC_CENTER + PULSE_WIDTH_DEADBAND) {
+  if (aux_a > config.rc_center + PULSE_WIDTH_DEADBAND) {
     digitalWrite(AUX_OUT_A, HIGH);
-  } else if (aux_a < RC_CENTER - PULSE_WIDTH_DEADBAND) {
+  } else if (aux_a < config.rc_center - PULSE_WIDTH_DEADBAND) {
     digitalWrite(AUX_OUT_A, LOW);
   }
-  if (aux_b > RC_CENTER + PULSE_WIDTH_DEADBAND) {
+  if (aux_b > config.rc_center + PULSE_WIDTH_DEADBAND) {
     digitalWrite(AUX_OUT_B, HIGH);
-  } else if (aux_b < RC_CENTER - PULSE_WIDTH_DEADBAND) {
+  } else if (aux_b < config.rc_center - PULSE_WIDTH_DEADBAND) {
     digitalWrite(AUX_OUT_B, LOW);
   }
 }
 
 void apply_break() {
-  digitalWrite(MOT_L_FWD_OUTPUT, HIGH);
-  digitalWrite(MOT_L_REV_OUTPUT, HIGH);
-  digitalWrite(MOT_R_FWD_OUTPUT, HIGH);
-  digitalWrite(MOT_R_REV_OUTPUT, HIGH);
 
-  int calc_throttle = throttle;
-  calc_throttle -= RC_CENTER; // center == 0
-  if (abs(calc_throttle) <= PULSE_WIDTH_DEADBAND)
-      calc_throttle = 0;
+  if (config.break_mode == BREAK_MODE_PWM) {
+    digitalWrite(MOT_L_EN_OUTPUT, LOW);
+    digitalWrite(MOT_R_EN_OUTPUT, LOW);
 
-  int speed  = calc_throttle * MAX_SPEED / PULSE_WIDTH_RANGE;
+  } else if (config.break_mode == BREAK_MODE_DIGITAL) {
+    digitalWrite(MOT_L_FWD_OUTPUT, HIGH);
+    digitalWrite(MOT_L_REV_OUTPUT, HIGH);
+    digitalWrite(MOT_R_FWD_OUTPUT, HIGH);
+    digitalWrite(MOT_R_REV_OUTPUT, HIGH);
 
-  if (speed < 0) {
-    speed = -speed;
-    if (speed > MAX_SPEED)
-      speed = MAX_SPEED;
-  } else {
-    speed = 0;
-  }
+    int calc_throttle = throttle;
+    calc_throttle -= config.rc_center; // center == 0
+    if (abs(calc_throttle) <= PULSE_WIDTH_DEADBAND)
+        calc_throttle = 0;
+
+    int speed  = calc_throttle * MAX_SPEED / PULSE_WIDTH_RANGE;
+
+    if (speed < 0) {
+      speed = -speed;
+      if (speed > MAX_SPEED)
+        speed = MAX_SPEED;
+    } else {
+      speed = 0;
+    }
 
 #ifdef USE_20KHZ_PWM
-  OCR1B = speed;
-  OCR1A = speed;
+    OCR1B = speed;
+    OCR1A = speed;
 #else
-  int pulse = map(speed, 0, MAX_SPEED, 0, 255);
-  analogWrite(MOT_L_EN_OUTPUT, pulse);
-  analogWrite(MOT_R_EN_OUTPUT, pulse);
+    int pulse = map(speed, 0, MAX_SPEED, 0, 255);
+    analogWrite(MOT_L_EN_OUTPUT, pulse);
+    analogWrite(MOT_R_EN_OUTPUT, pulse);
 #endif
+  }
 
 }
