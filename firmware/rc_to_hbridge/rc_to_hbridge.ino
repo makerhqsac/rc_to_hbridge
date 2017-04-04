@@ -95,12 +95,6 @@ void rc_read_values() {
     aux_a = config.rc_center; // aux outputs will keep current state if value is centered
     aux_b = config.rc_center;
   }
-
-  if (throttle > 0 && steering > 0) {
-    digitalWrite(LED_RC_STATUS_OUTPUT, HIGH);
-  } else {
-    digitalWrite(LED_RC_STATUS_OUTPUT, LOW);
-  }
 }
 
 void calc_input(uint8_t channel, uint8_t input_pin) {
@@ -182,10 +176,6 @@ void loop() {
 
   if (throttle <= 0 && steering <= 0) {
     state = STATE_NO_RC;
-  } else {
-    if (state == STATE_NO_RC) {
-      state = STATE_IDLE;
-    }
   }
 
   switch(state) {
@@ -213,7 +203,11 @@ void loop() {
 void run_state_idle() {
   set_speeds(0, 0);
 
-  if (throttle > config.rc_center + 250) {
+  digitalWrite(LED_RC_STATUS_OUTPUT, HIGH);
+
+  if (throttle > config.rc_center + 300) {
+    blink_status(5);
+    delay(4000);
     state = STATE_CONFIG;
   } else if (throttle > config.rc_center + PULSE_WIDTH_DEADBAND) {
     state = STATE_FWD;
@@ -251,35 +245,28 @@ void run_state_break() {
 
 void run_state_config() {
 
-  // indicate we are in config mode
-  blink_status(5);
-
-  delay(3000);
-
   blink_status(config.break_mode);
 
-  while (true) {
-    if (steering > config.rc_center + 250) {
-      int new_mode = config.break_mode + 1;
-      if (new_mode > BREAK_MODE_PWM) {
-        new_mode = BREAK_MODE_DISABLED;
-      }
-      config.break_mode = new_mode;
-      save_config();
-      blink_status(config.break_mode);
-      delay(500);
-    } else if (steering < config.rc_center - 250) {
-      int new_mode = config.break_mode - 1;
-      if (new_mode < BREAK_MODE_DISABLED) {
-        new_mode = BREAK_MODE_PWM;
-      }
-      config.break_mode = new_mode;
-      save_config();
-      blink_status(config.break_mode);
-      delay(500);
-    }
-  }
+  delay(4000);
 
+  rc_read_values();
+
+  if (steering > config.rc_center + 300) {
+    int new_mode = config.break_mode + 1;
+    if (new_mode > BREAK_MODE_PWM) {
+      new_mode = BREAK_MODE_DISABLED;
+    }
+    config.break_mode = new_mode;
+    save_config();
+
+  } else if (steering < config.rc_center - 300) {
+    int new_mode = config.break_mode - 1;
+    if (new_mode < BREAK_MODE_DISABLED) {
+      new_mode = BREAK_MODE_PWM;
+    }
+    config.break_mode = new_mode;
+    save_config();
+  }
 }
 
 void run_state_no_rc() {
@@ -291,7 +278,9 @@ void run_state_no_rc() {
 }
 
 void blink_status(int count) {
+  digitalWrite(LED_RC_STATUS_OUTPUT, LOW);
   for (int i = 0; i < count; i++) {
+    delay(500);
     digitalWrite(LED_RC_STATUS_OUTPUT, HIGH);
     delay(500);
     digitalWrite(LED_RC_STATUS_OUTPUT, LOW);
@@ -438,3 +427,4 @@ void apply_break() {
   }
 
 }
+
