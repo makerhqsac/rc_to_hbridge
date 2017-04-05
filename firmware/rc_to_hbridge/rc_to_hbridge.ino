@@ -42,9 +42,10 @@ enum state_t {
 
 #define RC_NUM_CHANNELS         4
 
-#define BREAK_MODE_DISABLED     1
-#define BREAK_MODE_DIGITAL      2
-#define BREAK_MODE_PWM          3
+#define PWM_MODE_4PIN_NOBREAK   1
+#define PWM_MODE_4PIN_BREAK     2
+#define PWM_MODE_6PIN_NOBREAK   3
+#define PWM_MODE_6PIN_BREAK     4
 
 
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega32U4__)
@@ -63,19 +64,19 @@ int aux_a, aux_b;
 int left_speed = 0;
 int right_speed = 0;
 
-#define CONFIG_VERSION "RC9"
-#define CONFIG_START 32
+#define CONFIG_VERSION "R1X"
+#define CONFIG_START 48
 
 // runtime configurable items
 struct ConfigStruct {
   char version[4]; // do not change
   // The variables of your settings
   int rc_center;
-  int break_mode;
+  int pwm_mode;
 } config = {
   CONFIG_VERSION,
   // The default values
-  RC_PULSE_CENTER, BREAK_MODE_DISABLED
+  RC_PULSE_CENTER, PWM_MODE_4PIN_NOBREAK
 };
 
 
@@ -135,7 +136,7 @@ void setup() {
   pinMode(RC_AUX_A_INPUT, INPUT);
   pinMode(RC_AUX_B_INPUT, INPUT);
 
-  load_config();
+  load_config(); load_config();
 
   aux_a = config.rc_center;
   aux_b = config.rc_center;
@@ -220,8 +221,12 @@ void run_state_fwd() {
   set_speeds(left_speed, right_speed);
 
   // state transitions
-  if (config.break_mode != BREAK_MODE_DISABLED && throttle < config.rc_center - PULSE_WIDTH_DEADBAND) {
-    state = STATE_BREAK;
+  if (throttle < config.rc_center - PULSE_WIDTH_DEADBAND) {
+    if (config.pwm_mode == PWM_MODE_4PIN_BREAK || config.pwm_mode == PWM_MODE_6PIN_BREAK) {
+      state = STATE_BREAK;
+    } else {
+      state = STATE_REV;
+    }
   }
 }
 
@@ -238,34 +243,34 @@ void run_state_break() {
   apply_break();
 
   // state transitions
-  if (throttle > config.rc_center - PULSE_WIDTH_DEADBAND) {
+  if (throttle > config.rc_center) {
     state = STATE_REV;
   }
 }
 
 void run_state_config() {
 
-  blink_status(config.break_mode);
+  blink_status(config.pwm_mode);
 
   delay(4000);
 
   rc_read_values();
 
   if (steering > config.rc_center + 300) {
-    int new_mode = config.break_mode + 1;
-    if (new_mode > BREAK_MODE_PWM) {
-      new_mode = BREAK_MODE_DISABLED;
+    int new_mode = config.pwm_mode + 1;
+    if (new_mode > PWM_MODE_6PIN_BREAK) {
+      new_mode = PWM_MODE_4PIN_NOBREAK;
     }
-    config.break_mode = new_mode;
-    save_config();
+    config.pwm_mode = new_mode;
+    save_config(); save_config();
 
   } else if (steering < config.rc_center - 300) {
-    int new_mode = config.break_mode - 1;
-    if (new_mode < BREAK_MODE_DISABLED) {
-      new_mode = BREAK_MODE_PWM;
+    int new_mode = config.pwm_mode - 1;
+    if (new_mode < PWM_MODE_4PIN_NOBREAK) {
+      new_mode = PWM_MODE_6PIN_BREAK;
     }
-    config.break_mode = new_mode;
-    save_config();
+    config.pwm_mode = new_mode;
+    save_config(); save_config();
   }
 }
 
@@ -320,6 +325,14 @@ void calculate_speeds() {
 }
 
 void set_left_speed(int speed) {
+  if (config.pwm_mode == PWM_MODE_4PIN_NOBREAK || config.pwm_mode == PWM_MODE_4PIN_BREAK) {
+    set_left_speed_4pin(speed);
+  } else {
+    set_left_speed_6pin(speed);
+  }
+}
+
+void set_left_speed_6pin(int speed) {
   boolean reverse = 0;
 
   if (speed < 0) {
@@ -345,7 +358,46 @@ void set_left_speed(int speed) {
   }
 }
 
+void set_left_speed_4pin(int speed) {
+  boolean reverse = 0;
+
+  if (speed < 0) {
+    speed = -speed;
+    reverse = 1;
+  }
+
+  if (speed > MAX_SPEED)
+    speed = MAX_SPEED;
+
+  if (reverse) {
+    digitalWrite(MOT_L_FWD_OUTPUT, LOW);
+    digitalWrite(MOT_L_REV_OUTPUT, HIGH);
+#ifdef USE_20KHZ_PWM
+    OCR1B = speed;
+#else
+    analogWrite(MOT_L_EN_OUTPUT, map(speed, 0, MAX_SPEED, 0, 255));
+#endif
+
+  } else {
+    digitalWrite(MOT_L_FWD_OUTPUT, HIGH);
+    digitalWrite(MOT_L_REV_OUTPUT, LOW);
+#ifdef USE_20KHZ_PWM
+    OCR1B = MAX_SPEED - speed;
+#else
+    analogWrite(MOT_L_EN_OUTPUT, map(speed, 0, MAX_SPEED, 255, 0));
+#endif
+  }
+}
+
 void set_right_speed(int speed) {
+  if (config.pwm_mode == PWM_MODE_4PIN_NOBREAK || config.pwm_mode == PWM_MODE_4PIN_BREAK) {
+    set_right_speed_4pin(speed);
+  } else {
+    set_right_speed_6pin(speed);
+  }
+}
+
+void set_right_speed_6pin(int speed) {
   boolean reverse = 0;
 
   if (speed < 0) {
@@ -371,6 +423,37 @@ void set_right_speed(int speed) {
   }
 }
 
+void set_right_speed_4pin(int speed) {
+  boolean reverse = 0;
+
+  if (speed < 0) {
+    speed = -speed;
+    reverse = 1;
+  }
+
+  if (speed > MAX_SPEED)
+    speed = MAX_SPEED;
+
+  if (reverse) {
+    digitalWrite(MOT_R_FWD_OUTPUT, LOW);
+    digitalWrite(MOT_R_REV_OUTPUT, HIGH);
+#ifdef USE_20KHZ_PWM
+    OCR1A = speed;
+#else
+    analogWrite(MOT_R_EN_OUTPUT, map(speed, 0, MAX_SPEED, 0, 255));
+#endif
+
+  } else {
+    digitalWrite(MOT_R_FWD_OUTPUT, HIGH);
+    digitalWrite(MOT_R_REV_OUTPUT, LOW);
+#ifdef USE_20KHZ_PWM
+    OCR1A = MAX_SPEED - speed;
+#else
+    analogWrite(MOT_R_EN_OUTPUT, map(speed, 0, MAX_SPEED, 255, 0));
+#endif
+  }
+}
+
 void set_speeds(int left_speed, int right_speed) {
   set_left_speed(left_speed);
   set_right_speed(right_speed);
@@ -391,40 +474,21 @@ void set_aux() {
 
 void apply_break() {
 
-  if (config.break_mode == BREAK_MODE_PWM) {
-    digitalWrite(MOT_L_EN_OUTPUT, LOW);
-    digitalWrite(MOT_R_EN_OUTPUT, LOW);
-
-  } else if (config.break_mode == BREAK_MODE_DIGITAL) {
+  if (config.pwm_mode == PWM_MODE_4PIN_BREAK) {
+    digitalWrite(MOT_L_EN_OUTPUT, HIGH);
     digitalWrite(MOT_L_FWD_OUTPUT, HIGH);
     digitalWrite(MOT_L_REV_OUTPUT, HIGH);
+    digitalWrite(MOT_R_EN_OUTPUT, HIGH);
     digitalWrite(MOT_R_FWD_OUTPUT, HIGH);
     digitalWrite(MOT_R_REV_OUTPUT, HIGH);
 
-    int calc_throttle = throttle;
-    calc_throttle -= config.rc_center; // center == 0
-    if (abs(calc_throttle) <= PULSE_WIDTH_DEADBAND)
-        calc_throttle = 0;
-
-    int speed  = calc_throttle * MAX_SPEED / PULSE_WIDTH_RANGE;
-
-    if (speed < 0) {
-      speed = -speed;
-      if (speed > MAX_SPEED)
-        speed = MAX_SPEED;
-    } else {
-      speed = 0;
-    }
-
-#ifdef USE_20KHZ_PWM
-    OCR1B = speed;
-    OCR1A = speed;
-#else
-    int pulse = map(speed, 0, MAX_SPEED, 0, 255);
-    analogWrite(MOT_L_EN_OUTPUT, pulse);
-    analogWrite(MOT_R_EN_OUTPUT, pulse);
-#endif
+  } else if (config.pwm_mode == PWM_MODE_6PIN_BREAK) {
+    digitalWrite(MOT_L_EN_OUTPUT, LOW);
+    digitalWrite(MOT_L_FWD_OUTPUT, HIGH);
+    digitalWrite(MOT_L_REV_OUTPUT, HIGH);
+    digitalWrite(MOT_R_EN_OUTPUT, LOW);
+    digitalWrite(MOT_R_FWD_OUTPUT, HIGH);
+    digitalWrite(MOT_R_REV_OUTPUT, HIGH);
   }
 
 }
-
