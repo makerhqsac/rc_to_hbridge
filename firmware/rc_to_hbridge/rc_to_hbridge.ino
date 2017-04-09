@@ -1,6 +1,8 @@
 #include <EnableInterrupt.h>
 #include <EEPROM.h>
 
+//#define DEBUG
+
 /* pin configuration */
 #define RC_THROTTLE_INPUT       2
 #define RC_STEERING_INPUT       3
@@ -129,8 +131,35 @@ void save_config() {
     EEPROM.write(CONFIG_START + t, *((char*)&config + t));
 }
 
+#ifdef DEBUG
+void reset_debug(int blinks) {
+  while (true) {
+    blink_status(blinks);
+    delay(5000);
+  }
+}
+
+ISR(BADISR_vect) {
+  reset_debug(10);
+}
+#endif
 
 void setup() {
+  unsigned char reset_src = MCUSR;   // save reset source
+  MCUSR = 0x00;  // cleared for next reset detection
+
+  pinMode(LED_RC_STATUS_OUTPUT, OUTPUT);
+
+#ifdef DEBUG
+  if(reset_src & (1<<PORF )) {
+    blink_status(2);
+  } else {
+    if(reset_src & (1<<EXTRF)) reset_debug(6);
+    if(reset_src & (1<<BORF )) reset_debug(7);
+    if(reset_src & (1<<WDRF )) reset_debug(8);
+  }
+#endif
+
   pinMode(RC_THROTTLE_INPUT, INPUT);
   pinMode(RC_STEERING_INPUT, INPUT);
   pinMode(RC_AUX_A_INPUT, INPUT);
@@ -141,20 +170,6 @@ void setup() {
   aux_a = config.rc_center;
   aux_b = config.rc_center;
 
-#ifdef USE_20KHZ_PWM
-    // Timer 1 configuration
-    // prescaler: clockI/O / 1
-    // outputs enabled
-    // phase-correct PWM
-    // top of 400
-    //
-    // PWM frequency calculation
-    // 16MHz / 1 (prescaler) / 2 (phase-correct) / 400 (top) = 20kHz
-    TCCR1A = 0b10100000;
-    TCCR1B = 0b00010001;
-    ICR1 = 400;
-#endif
-
   pinMode(MOT_L_EN_OUTPUT, OUTPUT);
   pinMode(MOT_L_FWD_OUTPUT, OUTPUT);
   pinMode(MOT_L_REV_OUTPUT, OUTPUT);
@@ -162,12 +177,25 @@ void setup() {
   pinMode(MOT_R_FWD_OUTPUT, OUTPUT);
   pinMode(MOT_R_REV_OUTPUT, OUTPUT);
 
-  pinMode(LED_RC_STATUS_OUTPUT, OUTPUT);
-
   enableInterrupt(RC_THROTTLE_INPUT, calc_throttle, CHANGE);
   enableInterrupt(RC_STEERING_INPUT, calc_steering, CHANGE);
   enableInterrupt(RC_AUX_A_INPUT, calc_aux_a, CHANGE);
   enableInterrupt(RC_AUX_B_INPUT, calc_aux_b, CHANGE);
+
+  #ifdef USE_20KHZ_PWM
+      // Timer 1 configuration
+      // prescaler: clockI/O / 1
+      // outputs enabled
+      // phase-correct PWM
+      // top of 400
+      //
+      // PWM frequency calculation
+      // 16MHz / 1 (prescaler) / 2 (phase-correct) / 400 (top) = 20kHz
+      TCCR1A = 0b10100000;
+      TCCR1B = 0b00010001;
+      ICR1 = 400;
+  #endif
+
 }
 
 void loop() {
@@ -201,12 +229,27 @@ void loop() {
   }
 }
 
+boolean is_config_mode() {
+  boolean is_config = false;
+
+  pinMode(MOT_L_REV_OUTPUT, INPUT);
+  digitalWrite(MOT_L_REV_OUTPUT, HIGH); // enable internal pullup
+
+  digitalWrite(MOT_R_REV_OUTPUT, LOW);
+  if (digitalRead(MOT_L_REV_OUTPUT) == LOW) {
+    is_config = true;
+  }
+  pinMode(MOT_L_REV_OUTPUT, OUTPUT);
+
+  return is_config;
+}
+
 void run_state_idle() {
   set_speeds(0, 0);
 
   digitalWrite(LED_RC_STATUS_OUTPUT, HIGH);
 
-  if (throttle > config.rc_center + 300) {
+  if (is_config_mode()) {
     blink_status(5);
     delay(4000);
     state = STATE_CONFIG;
@@ -492,3 +535,4 @@ void apply_break() {
   }
 
 }
+

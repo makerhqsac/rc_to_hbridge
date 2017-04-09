@@ -53,9 +53,9 @@ can use pins 2 and 3 instead.
 
 This firmware supports 6 and 4 pin dual channel H-Bridge boards. The format for the PWM signal is different depending on
 the PWM mode as well as if breaking is enabled. The mode can be adjusted by placing the board in configuration mode. To
-enter configuration mode, make sure the R/C transmitter is on and put the throttle channel to the maximum value (needs to
-be at least 1800 uS pulse) and then power on the R/C to H-Bridge board. At power on, if the board sees the high throttle
-value, it will go into configuration mode.
+enter configuration mode, make sure the R/C transmitter is on, place a jumper across the H-bridge pins 2 and 3 and then
+power on the R/C to H-Bridge board. At power on, if the board sees H-bridge pins 2 and 3 connected together,
+it will go into configuration mode.
 
 Configuration mode can be seen by the R/C status LED blinking 5 times at startup. Then every 4 seconds, the R/C status
 will blink a certain number of times, corresponding to the current active PWM mode. To change the mode, use the steering
@@ -68,9 +68,9 @@ channel all the way to the left or right to change the current mode. The followi
 | 3             | 6 PIN PWM, no breaking    | L-298                 |
 | 4             | 6 PIN PWM, with breaking  | L-298                 |
 
-After the desired configuration mode is set by using the steering channel, unplug the power to the R/C to H-Bridge board and
-power it up with the throttle in the center position, and the board will start up in normal mode, outputting the new mode
-to the PWM pins on the H-Bridge.
+After the desired configuration mode is set by using the steering channel, unplug the power to the R/C to H-Bridge board
+and remove the jumper between H-Bridge pins 2 and 3. Powering the board will start it up in normal mode, outputting the
+new mode to the PWM pins on the H-Bridge.
 
 
 ## Breaking
