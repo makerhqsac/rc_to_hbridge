@@ -9,8 +9,8 @@
 #define RC_AUX_A_INPUT         A0
 #define RC_AUX_B_INPUT         A1
 
-#define AUX_OUT_A              A5
-#define AUX_OUT_B              A6
+#define AUX_OUT_A              A4
+#define AUX_OUT_B              A5
 
 #define MOT_L_EN_OUTPUT        10
 #define MOT_L_FWD_OUTPUT        8
@@ -337,8 +337,8 @@ void blink_status(int count) {
 
 void calculate_speeds() {
 
-  int calc_throttle = throttle;
-  int calc_steering = steering;
+  int calc_throttle = constrain(throttle, config.rc_center-PULSE_WIDTH_RANGE, config.rc_center+PULSE_WIDTH_RANGE);
+  int calc_steering = constrain(steering, config.rc_center-PULSE_WIDTH_RANGE, config.rc_center+PULSE_WIDTH_RANGE);
 
   if (calc_throttle > 0 && calc_steering > 0) {
 
@@ -357,8 +357,8 @@ void calculate_speeds() {
     right_speed = ((long)calc_throttle * MAX_SPEED / PULSE_WIDTH_RANGE) + ((long)calc_steering * MAX_SPEED / PULSE_WIDTH_RANGE);
 
     // cap speeds to max
-    left_speed = min(max(left_speed, -MAX_SPEED), MAX_SPEED);
-    right_speed = min(max(right_speed, -MAX_SPEED), MAX_SPEED);
+    left_speed = constrain(left_speed, -MAX_SPEED, MAX_SPEED);
+    right_speed = constrain(right_speed, -MAX_SPEED, MAX_SPEED);
 
   } else {
     left_speed = 0;
@@ -535,4 +535,3 @@ void apply_break() {
   }
 
 }
-
