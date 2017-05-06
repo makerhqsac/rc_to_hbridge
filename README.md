@@ -13,6 +13,8 @@ Many H bridge boards in the 2A range are available on Amazon quite cheap, such a
 
 ![PCB](rc_to_hbridge_v2.png)
 
+![Typical Configuration](rc_to_hbridge_system.png)
+
 # Powering
 
 The board requires 5VDC power to operate. It can be powered either from the R/C inputs (which usually come from the R/C receiver which
