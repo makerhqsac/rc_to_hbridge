@@ -1,6 +1,35 @@
-EESchema Schematic File Version 4
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
 LIBS:rc_to_hbridge-cache
-EELAYER 26 0
+EELAYER 25 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -15,7 +44,7 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L rc_to_hbridge-rescue:VCC #PWR01
+L VCC #PWR01
 U 1 1 58A63C34
 P 1850 1450
 F 0 "#PWR01" H 1850 1300 50  0001 C CNN
@@ -26,7 +55,7 @@ F 3 "" H 1850 1450 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:GND #PWR02
+L GND #PWR02
 U 1 1 58A63C4A
 P 5750 4800
 F 0 "#PWR02" H 5750 4550 50  0001 C CNN
@@ -37,7 +66,7 @@ F 3 "" H 5750 4800 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:ATMEGA328-A IC1
+L ATMEGA328-A IC1
 U 1 1 58A872ED
 P 3100 3100
 F 0 "IC1" H 2350 4350 50  0000 L BNN
@@ -48,7 +77,7 @@ F 3 "" H 3100 3100 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:CONN_01X06 P4
+L CONN_01X06 P4
 U 1 1 58A8730D
 P 9900 2500
 F 0 "P4" H 9900 2850 50  0000 C CNN
@@ -59,7 +88,7 @@ F 3 "" H 9900 2500 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:LED D2
+L LED D2
 U 1 1 58A87342
 P 8650 3200
 F 0 "D2" H 8650 3300 50  0000 C CNN
@@ -70,7 +99,7 @@ F 3 "" H 8650 3200 50  0000 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:LED D1
+L LED D1
 U 1 1 58A87372
 P 1150 3200
 F 0 "D1" H 1150 3300 50  0000 C CNN
@@ -81,7 +110,7 @@ F 3 "" H 1150 3200 50  0000 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:R R1
+L R R1
 U 1 1 58A873AA
 P 1150 2650
 F 0 "R1" V 1230 2650 50  0000 C CNN
@@ -92,7 +121,7 @@ F 3 "" H 1150 2650 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:R R2
+L R R2
 U 1 1 58A873E3
 P 8650 2650
 F 0 "R2" V 8730 2650 50  0000 C CNN
@@ -103,7 +132,7 @@ F 3 "" H 8650 2650 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:C C1
+L C C1
 U 1 1 58A87561
 P 5450 2500
 F 0 "C1" H 5475 2600 50  0000 L CNN
@@ -114,7 +143,7 @@ F 3 "" H 5450 2500 50  0000 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:C C2
+L C C2
 U 1 1 58A875A5
 P 5450 2800
 F 0 "C2" H 5475 2900 50  0000 L CNN
@@ -125,7 +154,7 @@ F 3 "" H 5450 2800 50  0000 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:GND #PWR03
+L GND #PWR03
 U 1 1 58A8873D
 P 1850 4800
 F 0 "#PWR03" H 1850 4550 50  0001 C CNN
@@ -146,14 +175,14 @@ Wire Wire Line
 Wire Wire Line
 	5600 2500 5750 2500
 Wire Wire Line
-	5750 2500 5750 2650
+	5750 2500 5750 4800
 Wire Wire Line
 	5600 2800 5750 2800
 Connection ~ 5750 2800
 Wire Wire Line
 	2200 4100 1850 4100
 Wire Wire Line
-	1850 4100 1850 4200
+	1850 4100 1850 4800
 Wire Wire Line
 	2200 4200 1850 4200
 Connection ~ 1850 4200
@@ -163,7 +192,7 @@ Connection ~ 1850 4300
 Wire Wire Line
 	2200 2000 1850 2000
 Wire Wire Line
-	1850 1450 1850 2000
+	1850 1450 1850 2600
 Wire Wire Line
 	1850 2100 2200 2100
 Connection ~ 1850 2000
@@ -226,7 +255,7 @@ R_FWD
 Text Label 10500 2550 2    60   ~ 0
 R_REV
 $Comp
-L rc_to_hbridge-rescue:GND #PWR04
+L GND #PWR04
 U 1 1 58A89E61
 P 1150 4800
 F 0 "#PWR04" H 1150 4550 50  0001 C CNN
@@ -237,7 +266,7 @@ F 3 "" H 1150 4800 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:GND #PWR05
+L GND #PWR05
 U 1 1 58A89E8D
 P 8650 4800
 F 0 "#PWR05" H 8650 4550 50  0001 C CNN
@@ -248,7 +277,7 @@ F 3 "" H 8650 4800 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:VCC #PWR06
+L VCC #PWR06
 U 1 1 58A89EB9
 P 1150 1400
 F 0 "#PWR06" H 1150 1250 50  0001 C CNN
@@ -275,7 +304,7 @@ Wire Wire Line
 Text Label 9250 2150 2    60   ~ 0
 STATUS
 $Comp
-L rc_to_hbridge-rescue:AVR-ISP-6 CON1
+L AVR-ISP-6 CON1
 U 1 1 58AA0C0E
 P 1700 5850
 F 0 "CON1" H 1595 6090 50  0000 C CNN
@@ -322,7 +351,7 @@ MISO
 Text Label 4550 3450 2    60   ~ 0
 RST
 $Comp
-L rc_to_hbridge-rescue:CONN_01X02 P2
+L CONN_01X02 P2
 U 1 1 58ADEF3E
 P 4500 1000
 F 0 "P2" H 4500 1150 50  0000 C CNN
@@ -333,7 +362,7 @@ F 3 "" H 4500 1000 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:CONN_01X04 P1
+L CONN_01X04 P1
 U 1 1 58ADEF81
 P 3200 5850
 F 0 "P1" H 3200 6100 50  0000 C CNN
@@ -344,7 +373,7 @@ F 3 "" H 3200 5850 50  0000 C CNN
 	-1   0    0    1   
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:CONN_01X04 P5
+L CONN_01X04 P5
 U 1 1 58ADEFCD
 P 9900 3800
 F 0 "P5" H 9900 4050 50  0000 C CNN
@@ -365,7 +394,7 @@ Wire Wire Line
 Wire Wire Line
 	10500 3950 10500 4800
 $Comp
-L rc_to_hbridge-rescue:GND #PWR07
+L GND #PWR07
 U 1 1 58ADF974
 P 10500 4800
 F 0 "#PWR07" H 10500 4550 50  0001 C CNN
@@ -390,7 +419,7 @@ Wire Wire Line
 Wire Wire Line
 	5100 950  5100 800 
 $Comp
-L rc_to_hbridge-rescue:VCC #PWR08
+L VCC #PWR08
 U 1 1 58ADFD26
 P 5100 800
 F 0 "#PWR08" H 5100 650 50  0001 C CNN
@@ -401,7 +430,7 @@ F 3 "" H 5100 800 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:GND #PWR09
+L GND #PWR09
 U 1 1 58ADFD97
 P 5100 1300
 F 0 "#PWR09" H 5100 1050 50  0001 C CNN
@@ -420,7 +449,7 @@ Wire Wire Line
 Wire Wire Line
 	3400 6000 3900 6000
 $Comp
-L rc_to_hbridge-rescue:GND #PWR010
+L GND #PWR010
 U 1 1 58AE001C
 P 3900 6300
 F 0 "#PWR010" H 3900 6050 50  0001 C CNN
@@ -471,7 +500,7 @@ RC_A
 Text Label 4550 2950 2    60   ~ 0
 RC_B
 $Comp
-L rc_to_hbridge-rescue:CONN_02X06 P3
+L CONN_02X06 P3
 U 1 1 58AE1072
 P 7050 3100
 F 0 "P3" H 7050 3450 50  0000 C CNN
@@ -506,24 +535,24 @@ Wire Wire Line
 Wire Wire Line
 	7300 3350 7550 3350
 Wire Wire Line
-	6400 1450 6400 2950
+	6400 1450 6400 3250
 Wire Wire Line
-	7700 1450 7700 2950
+	7700 1450 7700 3250
 Connection ~ 7700 2950
 Connection ~ 6400 2950
 Wire Wire Line
-	6250 3050 6250 3150
+	6250 3050 6250 4100
 Wire Wire Line
-	6250 4100 7050 4100
+	6250 4100 7850 4100
 Wire Wire Line
-	7850 4100 7850 3150
+	7850 4100 7850 3050
 Wire Wire Line
 	7050 4100 7050 4800
 Connection ~ 7050 4100
 Connection ~ 6250 3150
 Connection ~ 7850 3150
 $Comp
-L rc_to_hbridge-rescue:GND #PWR011
+L GND #PWR011
 U 1 1 58AE5FF5
 P 7050 4800
 F 0 "#PWR011" H 7050 4550 50  0001 C CNN
@@ -534,7 +563,7 @@ F 3 "" H 7050 4800 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:VCC #PWR012
+L VCC #PWR012
 U 1 1 58AE607E
 P 6400 1450
 F 0 "#PWR012" H 6400 1300 50  0001 C CNN
@@ -545,7 +574,7 @@ F 3 "" H 6400 1450 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L rc_to_hbridge-rescue:VCC #PWR013
+L VCC #PWR013
 U 1 1 58AE60BF
 P 7700 1450
 F 0 "#PWR013" H 7700 1300 50  0001 C CNN
@@ -564,54 +593,25 @@ RC_A
 Text Label 7550 3350 2    60   ~ 0
 RC_B
 $Comp
-L rc_to_hbridge-rescue:Crystal_GND24 Y1
+L Crystal_GND24 Y1
 U 1 1 58B3B714
 P 5050 2650
 F 0 "Y1" H 5175 2850 50  0000 L CNN
 F 1 "Crystal_GND24" H 5175 2775 50  0000 L CNN
-F 2 "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm" H 5050 2650 50  0001 C CNN
+F 2 "Crystals:Crystal_SMD_5032-4pin_5.0x3.2mm" H 5050 2650 50  0001 C CNN
 F 3 "" H 5050 2650 50  0000 C CNN
 	1    5050 2650
 	0    1    1    0   
 $EndComp
+Connection ~ 5750 3350
 Wire Wire Line
-	4800 2500 5050 2500
+	4800 2500 5300 2500
 Connection ~ 5050 2500
 Wire Wire Line
-	4800 2800 5050 2800
+	4800 2800 5300 2800
 Connection ~ 5050 2800
 Wire Wire Line
-	4850 2650 5250 2650
+	4850 2650 5750 2650
 Connection ~ 5750 2650
 Connection ~ 5250 2650
-Wire Wire Line
-	1850 4200 1850 4300
-Wire Wire Line
-	1850 4300 1850 4800
-Wire Wire Line
-	1850 2000 1850 2100
-Wire Wire Line
-	1850 2100 1850 2300
-Wire Wire Line
-	1850 2300 1850 2600
-Wire Wire Line
-	7700 2950 7700 3250
-Wire Wire Line
-	6400 2950 6400 3250
-Wire Wire Line
-	7050 4100 7850 4100
-Wire Wire Line
-	6250 3150 6250 4100
-Wire Wire Line
-	7850 3150 7850 3050
-Wire Wire Line
-	5050 2500 5300 2500
-Wire Wire Line
-	5050 2800 5300 2800
-Wire Wire Line
-	5750 2650 5750 2800
-Wire Wire Line
-	5250 2650 5750 2650
-Wire Wire Line
-	5750 2800 5750 4800
 $EndSCHEMATC

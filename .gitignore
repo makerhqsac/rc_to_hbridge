@@ -35,6 +35,13 @@
 *.elf
 .tags
 .tags1
+
+.idea
+
+firmware/**/target
+firmware/**/.vscode
+firmware/**/cmake-build-debug
+
 hardware/*bak
 hardware/_autosave*
 
